@@ -3,50 +3,78 @@ package main
 import (
 	"DanilNaum/task_scheduler/internal/testtasks"
 	"bufio"
-	"time"
+	"fmt"
+
+	// "fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
-
-func ReadData(fileName string, second_task *[]string, minute_task *[]string, hour_task *[]string, mu *sync.Mutex){//функция обновления данных из файла tasks.txt, данные записываются в 3 массива в зависимости от частоты выполнения и обновляются при каждой новой итерации
-	//возможно это не очень оптимально и нужно менять данные только при изменении файла. 
-	//Так же может быть допустима задержка, тогда обновлять файл можно с некоторой заранее заданой переодичностью
-	
-	for{
-		dir, err := os.Getwd() //не разобрался как указывать относительный путь к файлу, поэтому пришлось запрашивать дирректорию
+type Tasks struct {
+    secondly []string
+    minutely []string
+    hourly    []string
+}
+func ReadData(fileName string, tasks *Tasks, mu *sync.Mutex){
+//функция обновления данных из файла tasks.txt,
+// данные записываются в 3 массива в зависимости 
+// от частоты выполнения и обновляется при изменении файла, проверка происходит каждые 30 секунд  
+	ticker := time.NewTicker(30 * time.Second)
+	updateData := func(){
+		file, err := os.Open(fileName)
 		if err != nil {
-			panic(err)
+			log.Fatalf("Не удалость открыть файл")
 		}
-		file, err := os.Open(dir + "/cmd/task_scheduler/" + fileName)
-		if err != nil {
-			panic(err)
-		}
+		defer file.Close()
 		s := bufio.NewScanner(file)
-		var second_task_tmp []string
-		var minute_task_tmp []string
-		var hour_task_tmp []string
+		var tmp_tasks Tasks
+
 		for s.Scan(){
 			if strings.Split(s.Text()," ")[0] == "secondly"{
-				second_task_tmp = append(second_task_tmp, s.Text())
+				
+				tmp_tasks.secondly = append(tmp_tasks.secondly,  s.Text())
+				// tmp_tasks.secondly = append(tmp_tasks.secondly, strings.Split(s," ")[2:])
+			
 			}else if strings.Split(s.Text()," ")[0] == "minutely"{
-				minute_task_tmp = append(minute_task_tmp, s.Text())
+				// minute_task_tmp = append(minute_task_tmp, s.Text())
+				tmp_tasks.minutely = append(tmp_tasks.minutely, s.Text())
 			}else if strings.Split(s.Text()," ")[0] == "hourly"{
-				hour_task_tmp = append(hour_task_tmp, s.Text())
+				tmp_tasks.hourly = append(tmp_tasks.hourly, s.Text())
 			}
 		}
 		mu.Lock()
-		*second_task = second_task_tmp
-		*minute_task = minute_task_tmp
-		*hour_task = hour_task_tmp
+		*tasks = tmp_tasks
 		mu.Unlock()
-		file.Close()
+		
+	}
+	fileInfo, err := os.Stat(fileName)
+    if err != nil {
+        log.Fatalf("Не удалость узнать информацию о файле")
+    }
+	lastModifiedTime := fileInfo.ModTime()
+	updateData()
+
+	checkFileChanges := func(){
+		fileInfo, err := os.Stat(fileName)
+    	if err != nil {
+        	log.Fatalf("Не удалость узнать информацию о файле")
+    	}
+		if fileInfo.ModTime().After(lastModifiedTime) {
+			fmt.Println(" Файл изменен, данные обновлены")
+			updateData()
+			lastModifiedTime = fileInfo.ModTime()
+		}
+	}
+	for range ticker.C {
+    	checkFileChanges()
 	}
 }
 
-func TaskMaker(second_task *[]string, minute_task *[]string, hour_task *[]string, mu *sync.Mutex,data_channel chan string){ 
-	// функция передачи задач на выполнение с определенной переодичностью
-	defer close(data_channel)
+
+func TaskMaker(task *Tasks, mu *sync.Mutex,data_channel chan string){
+// функция передачи задач на выполнение с определенной переодичностью
 	tickSecond := time.NewTicker(time.Second)
 	tickMinute := time.NewTicker(time.Minute)
 	tickHour := time.NewTicker(time.Hour)
@@ -57,19 +85,19 @@ func TaskMaker(second_task *[]string, minute_task *[]string, hour_task *[]string
 		select {
 		case <-tickSecond.C:
 			mu.Lock()
-			for _,task :=range (*second_task){
+			for _,task :=range (task.secondly){
 				data_channel<-task
 			}
 			mu.Unlock()
 		case <-tickMinute.C:
 			mu.Lock()
-			for _,task :=range (*minute_task){
+			for _,task :=range (task.minutely){
 				data_channel<-task
 			}
 			mu.Unlock()
 		case <-tickHour.C:
 			mu.Lock()
-			for _,task :=range (*hour_task){
+			for _,task :=range (task.hourly){
 				data_channel<-task
 			}
 			mu.Unlock()
@@ -88,11 +116,8 @@ func TaskDoing(numberOfSimultaneousRequests int, data_channel chan string  ){
 
 	for s := range data_channel{
 		a := strings.Split(s," ")
-		//wg.Add(1)
-		// go func(wg *sync.WaitGroup, a []string){
-		go func(a []string){
-			// defer wg.Done()
-			
+		
+		go func(a []string){			
 			select {
 			case <-thread[0]:
 				testtasks.Wait(1,a[2:])
@@ -110,30 +135,29 @@ func TaskDoing(numberOfSimultaneousRequests int, data_channel chan string  ){
 				testtasks.Wait(5,a[2:])
 				thread[4] <-  struct{}{}	
 			}		
-		// }(wg,a)
 		}(a)
 	}
 
 }
 
 func main() {
-	var second_task []string
-	var minute_task []string
-	var hour_task []string
+	// var second_task []string
+	// var minute_task []string
+	// var hour_task []string
+	var tasks Tasks
 	mu := new(sync.Mutex) 
-	//wg := new(sync.WaitGroup)
+	
 	numberOfSimultaneousRequests := 5 //константа определенная условиями задания
 	data_channel := make(chan string) // канал используемый для передачи очереди задач
+	defer close(data_channel)
+	// go ReadData("tasks.txt", &tasks ,&second_task, &minute_task, &hour_task, mu)
+	go ReadData("tasks.txt", &tasks, mu)
 
-	go ReadData("tasks.txt", &second_task, &minute_task, &hour_task, mu)
-
-	// go func() { 
-		
-	// }()
-	go TaskMaker(&second_task, &minute_task, &hour_task, mu, data_channel)
+	// go TaskMaker(&second_task, &minute_task, &hour_task, mu, data_channel)
+	go TaskMaker(&tasks, mu, data_channel)
 	
 	TaskDoing(numberOfSimultaneousRequests, data_channel)
 	// Наличие структуры на thread означает, что поток свободен и можно передать на него следующую задачу
 	
-	//wg.Wait()
+
 }

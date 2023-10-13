@@ -1,4 +1,4 @@
-secondly testtasks.Wait secondly1 2 7
+secondly testtasks.Wait secondly1 3 7
 secondly testtasks.Wait secondly2 1 4
 minutely testtasks.Wait minutely1 1 4
 minutely testtasks.Wait minutely2 3 7
