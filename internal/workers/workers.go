@@ -19,7 +19,7 @@ func worker(i int, dataChannel chan *task.Task, wg *sync.WaitGroup, stopAppChan 
 	for {
 		select {
 		case <-stopAppChan:
-			stopAppChan <- struct{}{}
+			// stopAppChan <- struct{}{}
 			return
 		case task, ok := <-dataChannel:
 			if !ok {

@@ -27,7 +27,8 @@ func Parse(fileName string, tasks *task.Tasks, mu *sync.Mutex, stopAppChan chan 
 		fileInfo, err := os.Stat(fileName)
 		if err != nil {
 			fmt.Print("Не удалость узнать информацию о файле")
-			stopAppChan <- struct{}{}
+			// stopAppChan <- struct{}{}
+			close(stopAppChan)
 			return
 		}
 		if fileInfo.ModTime().After(lastModifiedTime) {
@@ -49,8 +50,8 @@ func updateData(fileName string, tasks *task.Tasks, mu *sync.Mutex,stopAppChan c
 	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Print("Не удалость открыть файл")
-		stopAppChan <- struct{}{}
-		
+		// stopAppChan <- struct{}{}
+		close(stopAppChan)
 		return
 	}
 	defer file.Close()

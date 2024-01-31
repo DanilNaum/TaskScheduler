@@ -26,12 +26,12 @@ func NewTask(a []string) *Task {
 	}
 	mi, err := strconv.Atoi(a[3])
 	if err != nil {
-		fmt.Println("Ошибка! Неверные аргументы функции, 2 аргумент должен быть числом")
+		fmt.Println("Ошибка! Неверные аргументы функции, 4 аргумент должен быть числом")
 		return nil
 	}
 	ma, err := strconv.Atoi(a[4])
 	if err != nil {
-		fmt.Println("Ошибка! Неверные аргументы функции, 3 аргумент должен быть числом")
+		fmt.Println("Ошибка! Неверные аргументы функции, 5 аргумент должен быть числом")
 		return nil
 	}
 	if mi > ma {
@@ -62,7 +62,7 @@ func Manage(task *Tasks, mu *sync.Mutex, dataChannel chan *Task, stopAppChan cha
 	for {
 		select {
 		case <-stopAppChan:
-			stopAppChan <- struct{}{}
+			// stopAppChan <- struct{}{}
 			return
 		case <-ticker.C:
 			TransferToChan(task.Secondly, dataChannel, mu)

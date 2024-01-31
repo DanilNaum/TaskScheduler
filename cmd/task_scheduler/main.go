@@ -14,7 +14,7 @@ func main() {
 	wg := new(sync.WaitGroup)
 	numberOfSimultaneousRequests := 5 //константа определенная условиями задания
 	stopAppChan := make(chan struct{}, 1)
-	defer close(stopAppChan)
+	// defer close(stopAppChan)
 	dataChannel := make(chan *task.Task)
 	defer close(dataChannel)
 
