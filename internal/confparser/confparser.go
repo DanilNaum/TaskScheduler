@@ -15,7 +15,7 @@ func Parse(fileName string, tasks *task.Tasks, mu *sync.Mutex, stopAppChan chan 
 	// данные записываются в 3 массива в зависимости
 	// от частоты выполнения и обновляется при изменении файла, проверка происходит каждые 5 секунд
 	ticker := time.NewTicker(5 * time.Second)
-
+	timer := time.After(0)
 	// fileInfo, err := os.Stat(fileName)
 	// if err != nil {
 	// 	log.Fatalf("Не удалость узнать информацию о файле")
@@ -24,6 +24,14 @@ func Parse(fileName string, tasks *task.Tasks, mu *sync.Mutex, stopAppChan chan 
 	lastModifiedTime := time.Unix(0, 0)
 	updateData(fileName, tasks, mu,stopAppChan)
 	for {
+		select {
+		case <-stopAppChan:
+			return
+		case <-ticker.C:
+			break
+		case <-timer:
+			break
+		}
 		fileInfo, err := os.Stat(fileName)
 		if err != nil {
 			fmt.Print("Не удалость узнать информацию о файле")
@@ -36,12 +44,7 @@ func Parse(fileName string, tasks *task.Tasks, mu *sync.Mutex, stopAppChan chan 
 			updateData(fileName, tasks, mu,stopAppChan)
 			lastModifiedTime = fileInfo.ModTime()
 		}
-		select {
-			case <-stopAppChan:
-				return
-			case <-ticker.C:
-				continue
-		}
+		
 	}
 
 }

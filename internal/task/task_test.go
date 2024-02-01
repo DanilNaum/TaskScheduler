@@ -23,7 +23,7 @@ func TestManage(t *testing.T) {
 	},}
 	mu := new(sync.Mutex)
 	stopAppChan := make(chan struct{}, 1)
-		dataChannel := make(chan *task.Task)
+	dataChannel := make(chan *task.Task)
 	defer close(dataChannel)
 	// Act
 
