@@ -26,7 +26,7 @@ func worker(i int, dataChannel chan *task.Task, wg *sync.WaitGroup, stopAppChan 
 				return
 			}
 			testtasks.Wait(i, task)
-
+		
 		}
 
 	}
